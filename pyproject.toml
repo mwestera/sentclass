@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61.0", "transformers"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sentclass"
+version = "0.1"
+authors = [{name="Matthijs Westera", email="m.westera@hum.leidenuniv.nl"}]
+description = "Command-line wrapper around various ways of classifying sentences."
+readme = "README.md"
+requires-python = ">=3.7"
+
+[project.scripts]
+sentclass = "sentclass:main"
+
+[project.urls]
+"Homepage" = "https://github.com/mwestera/sentclass"
+"Bug Tracker" = "https://github.com/mwestera/sentclass/issues"
