@@ -20,4 +20,6 @@ $ sentclass "This will compute only the subjectivity of this sentence" --subj
 
 Or pipe into it:
 
+```bash
 $ cat sentences.txt | sentclass --subj
+```
