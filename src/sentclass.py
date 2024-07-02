@@ -1,3 +1,4 @@
+import collections
 import sys
 import argparse
 
@@ -14,6 +15,7 @@ Currently computes subjectivity based on a transformer model; concreteness simpl
 
 Example:
 $ sentclass "This is a sentence" --subj --conc
+
 """
 
 def main():
@@ -22,9 +24,12 @@ def main():
     parser.add_argument('sentence', nargs='?', type=str, default=None, help='Sentence to process; otherwise read lines from stdin.')
     parser.add_argument('--subj', '--subjectivity', action='store_true', help='Whether to output subjectivity scores.')
     parser.add_argument('--conc', '--concreteness', action='store_true', help='Whether to output concreteness scores.')
+    # parser.add_argument('--sent', '--sentiment', action='store_true', help='Whether to output sentiment scores.')
 
     classifier_map = {'subj': make_subjectivity_classifier,
-                      'conc': make_concreteness_classifier}
+                      'conc': make_concreteness_classifier,
+                      # 'sent': make_sentiment_classifier
+                      }
 
     args = parser.parse_args(namespace=OrderedNamespace())
 
@@ -91,6 +96,12 @@ def make_concreteness_classifier():
         return sum(filter(lambda x: x is not None, word_ratings)) / len(word_ratings)
 
     return classify_concreteness
+
+
+def make_sentiment_classifier():
+
+    raise NotImplementedError
+
 
 
 if __name__ == '__main__':
