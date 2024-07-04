@@ -23,6 +23,8 @@ $ sentclass "This is a sentence" --subj --conc
 
 """
 
+# TODO: Rename to qtype
+
 
 _subjectivity_models = {
     'en': 'GroNLP/mdebertav3-subjectivity-multilingual',    # also for ge, tu, ar
@@ -37,10 +39,13 @@ _sentiment_models = {
     'nl': "nlptown/bert-base-multilingual-uncased-sentiment", # English, Dutch, German, French, Spanish, and Italian
 }
 
+registered_classifiers = {}
+
+
 def main():
 
     args = parse_args()
-    classifiers = [_classifier_map[key](args.lang) for key in args.classifiers]
+    classifiers = [registered_classifiers[key] for key in args.classifiers]
 
     input_reader = [args.sentence] if args.sentence else sys.stdin
 
@@ -51,7 +56,7 @@ def main():
 
     for s in input_reader:
         s = s.strip()
-        csvwriter.writerow(classifier(s) for classifier in classifiers)
+        csvwriter.writerow(classifier(args.lang)(s) for classifier in classifiers)
 
 
 def parse_args():
@@ -60,24 +65,33 @@ def parse_args():
                         help='Sentence to process; otherwise read lines from stdin.')
     parser.add_argument('--lang', '--language', type=str, default='en', help='Language code (e.g., en, nl, fr, it)')
     parser.add_argument('--header', action='store_true', default=None,
-                        help='Where to print a csv-style header first.')
-    for key, func in _classifier_map.items():
+                        help='Whether to print a csv-style header first.')
+    for key, func in registered_classifiers.items():
         parser.add_argument(f'--{key}', action='append_const', dest='classifiers', const=key, help=func.__doc__)
 
     # TODO: If language not provided, auto-detect, maybe using fastlang or langdetect https://github.com/Mimino666/langdetect
 
     args = parser.parse_args()
+
     args.classifiers = ((seen := set())         # deduplicating a list maintaining order :D
-                        or [c for c in args.classifiers if not (c in seen or seen.add(c))]
-                        or _classifier_map.keys())
+                        or [c for c in args.classifiers if not (c in seen or seen.add(c))] if args.classifiers else registered_classifiers.keys())
 
     return args
 
 
-def make_subjectivity_classifier(language):
+def classifier_factory(name):
     """
-    To output subjectivity scores.
+    Decorator that registers classifiers.
     """
+    def named_classifier(func):
+        cached_func = functools.cache(func)
+        registered_classifiers[name] = cached_func
+        return cached_func
+    return named_classifier
+
+
+@classifier_factory('subj')
+def load_subjectivity_classifier(language):
 
     model_name = _subjectivity_models[language]
 
@@ -90,20 +104,24 @@ def make_subjectivity_classifier(language):
 
     index = ['LABEL_0', 'LABEL_1'].index    # TODO: Model-dependent...
 
-    def classify_subjectivity(text):
+    def subjectivity_classifier(text):
         result = model(text)[0]
-        result = sorted(model(text)[0], key=lambda x: index(x['label']))
-        return result[1]['score']
+        result = sorted(result, key=lambda x: index(x['label']))
+        score = result[1]['score']
+        return score
 
-    return classify_subjectivity
+    return subjectivity_classifier
 
 
-def make_concreteness_classifier(language):
+@classifier_factory('conc')
+def load_concreteness_classifier(language):
     """
     To output concreteness scores.
     """
 
     # TODO: Update with MWE? https://osf.io/preprints/psyarxiv/m397u
+
+    assert language == 'en'
 
     concreteness_ratings = {}
     with resources.files('auxiliary').joinpath('Concreteness_ratings_Brysbaert_et_al_BRM.tsv').open('r') as file:
@@ -114,20 +132,18 @@ def make_concreteness_classifier(language):
 
     word_re = re.compile(r'\b\w+\b')
 
-    def classify_concreteness(text):
+    def concreteness_classifier(text):
         # TODO: Use lemmatization, getting rid of stop words etc.
         word_ratings = list(filter(None, (concreteness_ratings.get(w, None) for w in word_re.findall(text.lower()))))
         if not word_ratings:
             return None
         return (sum(word_ratings) / len(word_ratings) - 1) / 5
 
-    return classify_concreteness
+    return concreteness_classifier
 
 
-def make_sentiment_classifier(language):
-    """
-    To output sentiment scores.
-    """
+@classifier_factory('sent')
+def load_sentiment_classifier(language):
 
     model_name = _sentiment_models[language]
     model = pipeline("sentiment-analysis", model=model_name, tokenizer=model_name, top_k=None)
@@ -137,18 +153,13 @@ def make_sentiment_classifier(language):
         labels = ['1 star', '2 stars', '3 stars', '4 stars', '5 stars'] # TODO: Model-dependent...
     values = (-1 + (n * 2/(len(labels)-1)) for n in range(len(labels)))
 
-    def classify_sentiment(text):
+    def sentiment_classifier(text):
         result = model(text)[0]
         probabilities = [r['score'] for r in sorted(result, key=lambda x: labels.index(x['label']))]
         aggregate = sum(value * prob for prob, value in zip(probabilities, values))
         return aggregate
 
-    return classify_sentiment
-
-
-_classifier_map = {'subj': make_subjectivity_classifier,
-                   'conc': make_concreteness_classifier,
-                   'sent': make_sentiment_classifier}
+    return sentiment_classifier
 
 
 if __name__ == '__main__':
