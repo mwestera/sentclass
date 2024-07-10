@@ -1,6 +1,3 @@
-import collections
-import logging
-import subprocess
 import sys
 import argparse
 
@@ -19,7 +16,7 @@ Classif sentences along various dimensions.
 Currently computes subjectivity, sentiment based on a transformer model; concreteness simply by averaging word scores from a lookup table (Brysbaert et al.) 
 
 Example:
-$ sentclass "This is a sentence" --subj --conc
+$ echo "This is a sentence" | sentclass --subj --conc
 
 """
 
