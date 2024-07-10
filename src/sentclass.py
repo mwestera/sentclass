@@ -47,22 +47,20 @@ def main():
     args = parse_args()
     classifiers = [registered_classifiers[key] for key in args.classifiers]
 
-    input_reader = [args.sentence] if args.sentence else sys.stdin
-
     csvwriter = csv.writer(sys.stdout)
 
     if args.header:
         csvwriter.writerow(args.classifiers)
 
-    for s in input_reader:
+    for s in args.sentences:
         s = s.strip()
         csvwriter.writerow(classifier(args.lang)(s) for classifier in classifiers)
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Classify sentences along various dimensions.')
-    parser.add_argument('sentence', nargs='?', type=str, default=None,
-                        help='Sentence to process; otherwise read lines from stdin.')
+    parser.add_argument('sentences', nargs='?', type=argparse.FileType('r'), default=sys.stdin,
+                        help='File containing sentences; default stdin.')
     parser.add_argument('--lang', '--language', type=str, default='en', help='Language code (e.g., en, nl, fr, it)')
     parser.add_argument('--header', action='store_true', default=None,
                         help='Whether to print a csv-style header first.')
