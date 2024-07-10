@@ -13,13 +13,13 @@ This will make the command `sentclass` available in your shell.
 ## Examples ##
 
 ```bash
-$ sentclass "This will compute only the concreteness of this sentence" --conc
-$ sentclass "This will compute all attributes of this sentence."
-$ sentclass "This will compute only the subjectivity of this sentence" --subj
+$ echo "This will compute only the concreteness of this sentence" | sentclass --conc
+$ echo "This will compute all attributes of this sentence." | sentclass
+$ echo "This will compute only the subjectivity of this sentence" | sentclass --subj
 ```
 
-Or pipe into it:
+Or pass a file into it:
 
 ```bash
-$ cat sentences.txt | sentclass --subj
+$ sentclass sentences.txt --subj
 ```
